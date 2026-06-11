@@ -1,11 +1,18 @@
 FROM ros:noetic-robot
 
+
+### SETUP SYSTEM ###
+
 # Set bash as default
 SHELL ["/bin/bash", "-c"]
 
 # Update system and setup bash
 RUN apt-get update && apt-get upgrade -y
 RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
+
+# Install necessary packages for ROS and OpenCV
+RUN apt-get install -y python3-pip libgl1-mesa-glx
+RUN python3 -m pip install opencv-python numpy
 
 ### ROS PACKAGE ###
 

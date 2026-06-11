@@ -9,9 +9,9 @@ def _test_callback(msg):
     rospy.loginfo(f"Efforts: {msg.effort}")
 
 if __name__ == '__main__':
-    rospy.init_node('hsr_controller')
+    rospy.init_node('hsr_debug')
 
     joint_sub = rospy.Subscriber('/hsrb/joint_states', JointState, callback=_test_callback)
-    rospy.loginfo("HSR Controller node started.")
+    rospy.loginfo("HSR Debug node started.")
 
     rospy.spin()
