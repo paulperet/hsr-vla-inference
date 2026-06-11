@@ -23,8 +23,13 @@ RUN source /root/catkin_ws/devel/setup.bash && catkin_make
 
 # Create ROS node script
 RUN mkdir /root/catkin_ws/src/hsr_controller/scripts
+
+COPY hsr_debug.py /root/catkin_ws/src/hsr_controller/scripts
 COPY hsr_controller.py /root/catkin_ws/src/hsr_controller/scripts
+
+RUN chmod +x /root/catkin_ws/src/hsr_controller/scripts/hsr_debug.py
 RUN chmod +x /root/catkin_ws/src/hsr_controller/scripts/hsr_controller.py
+
 RUN source /root/catkin_ws/devel/setup.bash && catkin_make
 
 ### UTILITIES ###
