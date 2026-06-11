@@ -1,7 +1,24 @@
 FROM ros:noetic-robot
 
-# Update system
+# Set bash as default
+SHELL ["/bin/bash", "-c"]
+
+# Update system and setup bash
 RUN apt-get update && apt-get upgrade -y
+RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
+
+### ROS PACKAGE ###
+
+WORKDIR /root/catkin_ws
+RUN mkdir src
+RUN source /opt/ros/noetic/setup.bash && catkin_make
+RUN echo "source /root/catkin_ws/devel/setup.bash" >> ~/.bashrc
+
+WORKDIR /root/catkin_ws/src
+RUN catkin_create_pkg hsr_controller rospy
+
+WORKDIR /root/catkin_ws
+RUN source /root/catkin_ws/devel/setup.bash && catkin_make
 
 ### UTILITIES ###
 
