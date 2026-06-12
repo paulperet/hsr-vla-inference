@@ -1,13 +1,25 @@
+import os
+
 import yaml
 import torch
 
 from lerobot.policies.pi05 import PI05Policy
 from lerobot.policies.factory import make_pre_post_processors
 
-from fastapi import FastAPI
+from fastapi import Body, FastAPI
 from utils import Input, Output, select_device
+import time
+import torch
+from ray import serve
 
 device = select_device()
+
+# Disable TorchDynamo and TorchCompile if not using CUDA
+# Avoid crash on mps/cpu
+if device.type != "cuda":
+    os.environ["TORCHDYNAMO_DISABLE"] = "1"
+    os.environ["TORCH_COMPILE_DISABLE"] = "1"
+
 print(f"Using device: {device}")
 
 # Load configuration
@@ -20,28 +32,45 @@ with open('config.yaml', 'r') as f:
 # Start server
 app = FastAPI()
 
-# Load policy
-policy = PI05Policy.from_pretrained(repo_id, device_map=device).eval()
+@serve.deployment()
+@serve.ingress(app)
+class HSRInferenceServer:
+    def __init__(self):
+        self.policy = PI05Policy.from_pretrained(repo_id, device_map=device).eval()
+        self.preprocess, self.postprocess = make_pre_post_processors(
+            self.policy.config,
+            repo_id,
+            preprocessor_overrides={"device_processor": {"device": str(device)}},
+        )
 
-preprocess, postprocess = make_pre_post_processors(
-    policy.config,
-    repo_id,
-    preprocessor_overrides={"device_processor": {"device": str(device)}},
-)
+    @app.post("/predict", response_model=Output)
+    def predict(self, raw_data:  Input = Body(...)) -> Output:
+        # Process the single request.
 
-@app.post("/predict/", response_class=Output)
-def predict(raw_data) -> Output:
+        data = {
+            "observation.image.head": torch.tensor(raw_data.image_head_tensor).permute(2, 0, 1).float() / 255.0,
+            "observation.image.hand": torch.tensor(raw_data.image_hand_tensor).permute(2, 0, 1).float() / 255.0,
+            "observation.state": torch.tensor(raw_data.observation).float(),
+            "task": raw_data.task
+            }
 
-    print("Received request with data:", raw_data)
-    raw_data = Input.parse_raw(raw_data)
+        print(data["observation.image.hand"].shape)
+        print(data["observation.image.head"].shape)
+        print(data["observation.state"].shape)
+        print(data["task"])
+        
+        data = self.preprocess(data)
+
+        # Predict the action chunk
+        with torch.inference_mode():
+            action_chunk = self.policy.predict_action_chunk(data)
+
+        action_chunk = self.postprocess(action_chunk)
+
+        response = Output(action=action_chunk.cpu().tolist())
+
+        return response
     
-    raw_data = {
-        "observation.image.head": raw_data.image_head_tensor.permute(2, 0, 1),
-        "observation.image.hand": raw_data.image_hand_tensor.permute(2, 0, 1),
-        "observation.state": raw_data.observation,
-        "task": raw_data.task
-    }
 
-    processed_data = preprocess(raw_data)
-
-    return Output(**postprocess(policy(**processed_data)))
+serve.run(HSRInferenceServer.bind(), route_prefix="/")
+time.sleep(60*60) # Keep the server running for 1 hour
