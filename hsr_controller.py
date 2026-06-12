@@ -2,21 +2,22 @@
 
 import rospy
 from sensor_msgs.msg import JointState, CompressedImage
-import message_filters
+from geometry_msgs.msg import Twist
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+from rospy import wait_for_message
 import cv2
 import numpy as np
 
+import requests
+
+
 # Store actions
 actions = []
-
-# Initialize HSR policy rate
-rate = rospy.Rate(30)
 
 def _process_joint_states(msg: JointState):
     return msg.position
 
 def _process_image(msg: CompressedImage):
-    rospy.loginfo(f"Received image format: {msg.format}")
     try:
         array = np.frombuffer(msg.data, np.uint8)
         image = cv2.imdecode(array, cv2.IMREAD_COLOR)
@@ -25,24 +26,84 @@ def _process_image(msg: CompressedImage):
         rospy.logerr(f"Error converting image: {error}")
 
 def _process_data(joint_msg: JointState, hand_img_msg: CompressedImage, head_img_msg: CompressedImage):
-    joint_positions = _process_joint_states(joint_msg)
-    hand_image = _process_image(hand_img_msg)
-    head_image = _process_image(head_img_msg)
+    rospy.loginfo("Processing synchronized data...")
+    joint_positions = list(_process_joint_states(joint_msg))
+    joint_positions = joint_positions[:3] + joint_positions[11:] + [joint_positions[7]] + joint_positions[9:11]
+    hand_image = _process_image(hand_img_msg).tolist()
+    head_image = _process_image(head_img_msg).tolist()
+
+    resp = requests.post("http://host.docker.internal:8000/predict", json={
+        "image_head_tensor": head_image,
+        "image_hand_tensor": hand_image,
+        "observation": joint_positions,
+        "task": "Grab the orange cup"
+    })
+
+    global actions
+    actions = resp.json()["action"][0]
+    rospy.loginfo(f"Done, received {len(actions)} actions.")
 
 if __name__ == '__main__':
     rospy.init_node('hsr_controller')
     rospy.loginfo("HSR Controller node started.")
 
+    # Initialize HSR policy rate
+    rate = rospy.Rate(30) # 30 Hz
+
+    # linear.x, linear.y, linear.z, angular.x, angular.y, angular.z
+    base_pub = rospy.Publisher("/hsrb/command_velocity", Twist, queue_size=1)
+
+    # arm_lift_joint, arm_flex_joint,arm_roll_joint, wrist_flex_joint, wrist_roll_joint
+    arm_pub = rospy.Publisher('/hsrb/arm_trajectory_controller/command', JointTrajectory, queue_size=1)
+
+    # head_tilt_joint, head_pan_joint
+    head_pub = rospy.Publisher('/hsrb/head_trajectory_controller/command', JointTrajectory, queue_size=1)
+
+    # hand_motor_joint
+    gripper_pub = rospy.Publisher('/hsrb/gripper_controller/command', JointTrajectory, queue_size=1)
+
     while not rospy.is_shutdown():
         if len(actions) == 0:
             # Feed a new observation
-            joint_sub = rospy.Subscriber('/hsrb/joint_states', JointState)
-            image_hand_sub = rospy.Subscriber('/hsrb/hand_camera/image_raw/compressed', CompressedImage)
-            image_head_sub = rospy.Subscriber('/hsrb/head_rgbd_sensor/rgb/image_rect_color/compressed', CompressedImage)
+            joint_sub = wait_for_message('/hsrb/joint_states', JointState)
+            image_hand_sub = wait_for_message('/hsrb/hand_camera/image_raw/compressed', CompressedImage)
+            image_head_sub = wait_for_message('/hsrb/head_rgbd_sensor/rgb/image_rect_color/compressed', CompressedImage)
 
-            time_synchronizer = message_filters.TimeSynchronizer([joint_sub, image_hand_sub, image_head_sub], 10)
-            time_synchronizer.registerCallback(_process_data)
+            _process_data(joint_sub, image_hand_sub, image_head_sub) 
         else:
             # Execute the next action
             action = actions.pop(0)
+            rospy.loginfo(f"Executing action: {action}")
+
+            base_cmd = Twist()
+            base_cmd.linear.x = action[8]
+            base_cmd.linear.y = action[9]
+            base_cmd.angular.z = action[10]
+
+            arm_cmd = JointTrajectory()
+            arm_cmd.joint_names = ['arm_lift_joint', 'arm_flex_joint', 'arm_roll_joint', 'wrist_flex_joint', 'wrist_roll_joint']
+            p = JointTrajectoryPoint()
+            p.positions = action[:5]
+            p.time_from_start = rospy.Duration(1)
+            arm_cmd.points = [p]
+
+            head_cmd = JointTrajectory()
+            head_cmd.joint_names = ['head_tilt_joint', 'head_pan_joint']
+            p = JointTrajectoryPoint()
+            p.positions = [action[7]] + [action[6]]
+            p.time_from_start = rospy.Duration(1)
+            head_cmd.points = [p]
+
+            gripper_cmd = JointTrajectory()
+            gripper_cmd.joint_names = ['hand_motor_joint']
+            p = JointTrajectoryPoint()
+            p.positions = [action[5]]
+            p.time_from_start = rospy.Duration(1)
+            gripper_cmd.points = [p]
+
+            base_pub.publish(base_cmd)
+            arm_pub.publish(arm_cmd)
+            head_pub.publish(head_cmd)
+            gripper_pub.publish(gripper_cmd)
+
             rate.sleep()
