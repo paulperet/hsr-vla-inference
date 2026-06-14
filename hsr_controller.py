@@ -21,6 +21,7 @@ def _process_image(msg: CompressedImage):
     try:
         array = np.frombuffer(msg.data, np.uint8)
         image = cv2.imdecode(array, cv2.IMREAD_COLOR)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
     except cv2.error as error:
         rospy.logerr(f"Error converting image: {error}")

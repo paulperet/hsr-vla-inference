@@ -1,4 +1,4 @@
 git+https://github.com/huggingface/lerobot.git@main
 'lerobot[all]'
+"ray[default]"
 fastapi
-docarray
