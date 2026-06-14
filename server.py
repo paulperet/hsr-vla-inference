@@ -71,6 +71,6 @@ class HSRInferenceServer:
 
         return response
     
-
+serve.start(http_options={"host": "0.0.0.0", "port": 8000})
 serve.run(HSRInferenceServer.bind(), route_prefix="/")
-time.sleep(60*60) # Keep the server running for 1 hour
+time.sleep(60*60*24) # Keep the server running for 1 day

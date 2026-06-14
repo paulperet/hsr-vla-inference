@@ -28,7 +28,7 @@ def _process_image(msg: CompressedImage):
 def _process_data(joint_msg: JointState, hand_img_msg: CompressedImage, head_img_msg: CompressedImage):
     rospy.loginfo("Processing synchronized data...")
     joint_positions = list(_process_joint_states(joint_msg))
-    joint_positions = joint_positions[:3] + joint_positions[11:] + [joint_positions[7]] + joint_positions[9:11]
+    joint_positions = [joint_positions[1]] + [joint_positions[0]] + [joint_positions[2]] + joint_positions[11:] + [joint_positions[7]] + joint_positions[9:11]
     hand_image = _process_image(hand_img_msg).tolist()
     head_image = _process_image(head_img_msg).tolist()
 
