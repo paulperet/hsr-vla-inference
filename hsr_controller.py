@@ -97,21 +97,21 @@ if __name__ == '__main__':
             arm_cmd.joint_names = ['arm_lift_joint', 'arm_flex_joint', 'arm_roll_joint', 'wrist_flex_joint', 'wrist_roll_joint']
             p = JointTrajectoryPoint()
             p.positions = action[:5]
-            p.time_from_start = rospy.Duration(1 / 30)
+            p.time_from_start = rospy.Duration(1 / 15)
             arm_cmd.points = [p]
 
             head_cmd = JointTrajectory()
             head_cmd.joint_names = ['head_tilt_joint', 'head_pan_joint']
             p = JointTrajectoryPoint()
             p.positions = [action[7]] + [action[6]]
-            p.time_from_start = rospy.Duration(1 / 30)
+            p.time_from_start = rospy.Duration(1 / 15)
             head_cmd.points = [p]
 
             gripper_cmd = JointTrajectory()
             gripper_cmd.joint_names = ['hand_motor_joint']
             p = JointTrajectoryPoint()
             p.positions = [action[5]]
-            p.time_from_start = rospy.Duration(1 / 30)
+            p.time_from_start = rospy.Duration(1 / 15)
             gripper_cmd.points = [p]
 
             base_pub.publish(base_cmd)
