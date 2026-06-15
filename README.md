@@ -29,7 +29,11 @@ Verify topics are listed
 rostopic list
 ```
 
+---
+
 ### Server
+
+On a new terminal or another machine with a GPU:
 
 Start server
 ```bash
@@ -38,8 +42,8 @@ export PROMPT="Grab the cup"
 export MAX_TIME=600
 python server.py
 ```
-Test server
 
+Test server
 ```bash
 python test_server.py
 ```
