@@ -1,12 +1,12 @@
 ### Install
 
 ```bash
-git clone ...
+git clone https://github.com/paulperet/hsr-vla-inference
 docker image build -t ros_noetic .
 sudo apt install ffmpeg # or brew install ffmpeg
 python3.12 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements
+pip install -r requirements.txt
 ```
 
 ### Run
@@ -15,20 +15,21 @@ pip install -r requirements
 docker run -it --net=host ros_noetic
 ```
 
-### Set the IP Adress of the HSR
+### Inside the container, set the IP Adress of the computer and of the HSR
 
 ```bash
-export ROS_IP=192.168.x.x
-export ROS_MASTER_URI=http://example:11311
+export ROS_IP=computer_ip
+export ROS_MASTER_URI=http://robot_ip:11311
 ```
 
 ### Test connection
 
+Verify topics are listed
 ```bash
 rostopic list
 ```
 
-#### Server
+### Server
 
 Start server
 ```bash
