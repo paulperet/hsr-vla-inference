@@ -9,7 +9,27 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Run
+---
+
+### Server
+
+On your computer or another machine with a GPU:
+
+Start server
+```bash
+python server.py
+```
+
+Test server
+```bash
+python test_server.py
+```
+
+---
+
+On a new terminal:
+
+### Start container
 
 ```bash
 docker run -it --net=host ros_noetic
@@ -29,21 +49,10 @@ Verify topics are listed
 rostopic list
 ```
 
----
-
-### Server
-
-On a new terminal or another machine with a GPU:
-
-Start server
+### Run package
 ```bash
 export SERVER_URL=http://example:8000/predict
 export PROMPT="Grab the cup"
 export MAX_TIME=600
-python server.py
-```
-
-Test server
-```bash
-python test_server.py
+rosrun hsr_controller hsr_controller.py
 ```
