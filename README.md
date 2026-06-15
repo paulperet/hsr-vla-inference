@@ -32,6 +32,9 @@ rostopic list
 
 Start server
 ```bash
+export SERVER_URL=http://example:8000/predict
+export PROMPT="Grab the cup"
+export MAX_TIME=600
 python server.py
 ```
 Test server

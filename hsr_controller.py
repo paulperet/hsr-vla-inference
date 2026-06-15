@@ -9,7 +9,14 @@ import cv2
 import numpy as np
 
 import requests
+import os
 
+SERVER_URL = os.environ.get("SERVER_URL", "http://host.docker.internal:8000/predict")
+PROMPT = os.environ.get("PROMPT", "Grab the cup")
+
+# Total time (excluding inference delay), default 10m
+MAX_TIME = float(os.environ.get("MAX_TIME", 600))
+total_time = MAX_TIME
 
 # Store actions
 actions = []
@@ -33,11 +40,11 @@ def _process_data(joint_msg: JointState, hand_img_msg: CompressedImage, head_img
     hand_image = _process_image(hand_img_msg).tolist()
     head_image = _process_image(head_img_msg).tolist()
 
-    resp = requests.post("http://host.docker.internal:8000/predict", json={
+    resp = requests.post(SERVER_URL, json={
         "image_head_tensor": head_image,
         "image_hand_tensor": hand_image,
         "observation": joint_positions,
-        "task": "Grab the orange cup"
+        "task": PROMPT
     })
 
     global actions
@@ -45,8 +52,11 @@ def _process_data(joint_msg: JointState, hand_img_msg: CompressedImage, head_img
     rospy.loginfo(f"Done, received {len(actions)} actions.")
 
 if __name__ == '__main__':
+
     rospy.init_node('hsr_controller')
     rospy.loginfo("HSR Controller node started.")
+
+    print(f"Prompt: {PROMPT}, Max time: {MAX_TIME}s")
 
     # Initialize HSR policy rate
     rate = rospy.Rate(30) # 30 Hz
@@ -63,7 +73,7 @@ if __name__ == '__main__':
     # hand_motor_joint
     gripper_pub = rospy.Publisher('/hsrb/gripper_controller/command', JointTrajectory, queue_size=1)
 
-    while not rospy.is_shutdown():
+    while not rospy.is_shutdown() and total_time > 0:
         if len(actions) == 0:
             # Feed a new observation
             joint_sub = wait_for_message('/hsrb/joint_states', JointState)
@@ -74,7 +84,9 @@ if __name__ == '__main__':
         else:
             # Execute the next action
             action = actions.pop(0)
-            rospy.loginfo(f"Executing action: {action}")
+            
+            #rospy.loginfo(f"Executing action: {action}")
+            rospy.loginfo(f"Remaining time: {total_time}")
 
             base_cmd = Twist()
             base_cmd.linear.x = action[8]
@@ -106,5 +118,8 @@ if __name__ == '__main__':
             arm_pub.publish(arm_cmd)
             head_pub.publish(head_cmd)
             gripper_pub.publish(gripper_cmd)
+
+            # Subtract the time for one action at 30hz
+            total_time -= 1/30
 
             rate.sleep()
