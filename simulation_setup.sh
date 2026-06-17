@@ -1,12 +1,12 @@
 # Setup catkin workspace
-mkdir -p /root/catkin_ws/src
+mkdir /root/catkin_ws
 cd /root/catkin_ws
 mkdir src
 source /opt/ros/noetic/setup.bash && catkin_make
 echo "source /root/catkin_ws/devel/setup.bash" >> ~/.bashrc
 
 # Create ROS package
-mkdir -p /root/catkin_ws/src
+mkdir /root/catkin_ws/src
 cd /root/catkin_ws/src
 catkin_create_pkg hsr_controller rospy sensor_msgs geometry_msgs trajectory_msgs
 cd /root/catkin_ws
