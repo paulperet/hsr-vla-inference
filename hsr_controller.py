@@ -36,9 +36,9 @@ def _process_joint_states(msg: JointState):
 
 def _process_image(msg):
     try:
-        array = np.frombuffer(msg.data, np.uint8)
+        image = np.frombuffer(msg.data, np.uint8)
         if compressed:
-            image = cv2.imdecode(array, cv2.IMREAD_COLOR)
+            image = cv2.imdecode(image, cv2.IMREAD_COLOR)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
     except cv2.error as error:
