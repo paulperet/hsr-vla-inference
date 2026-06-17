@@ -6,6 +6,7 @@ from geometry_msgs.msg import Twist
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from rospy import wait_for_message
 import cv2
+from cv_bridge import CvBridge
 import numpy as np
 
 import requests
@@ -29,6 +30,7 @@ published_topics = rospy.get_published_topics()
 simulation = False
 if '/hsrb/hand_camera/image_raw/compressed' not in published_topics and '/hsrb/head_rgbd_sensor/rgb/image_rect_color/compressed' not in published_topics:
     simulation = True
+    bridge = CvBridge()
     rospy.logwarn("Simulation environment detected.")
 
 def _process_joint_states(msg: JointState):
@@ -45,9 +47,7 @@ def _process_compressed_image(msg: CompressedImage):
 
 def _process_raw_image(msg: Image):
     try:
-        image = np.array(msg.data, np.uint8)
-        image = image.reshape((msg.height, msg.width, 3))
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = bridge.imgmsg_to_cv2(msg, desired_encoding='rgb8')
         return image
     except cv2.error as error:
         rospy.logerr(f"Error converting image: {error}")
