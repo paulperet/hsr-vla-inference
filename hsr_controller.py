@@ -26,10 +26,10 @@ actions = []
 published_topics = rospy.get_published_topics()
 
 # Check if compressed image topics are available
-compressed = True
+simulation = False
 if '/hsrb/hand_camera/image_raw/compressed' not in published_topics and '/hsrb/head_rgbd_sensor/rgb/image_rect_color/compressed' not in published_topics:
-    compressed = False
-    rospy.logwarn("Compressed image topics not available. Using raw image topics instead.")
+    simulation = True
+    rospy.logwarn("Simulation environment detected.")
 
 def _process_joint_states(msg: JointState):
     return msg.position
@@ -55,14 +55,14 @@ def _process_raw_image(msg: Image):
 def _process_data(joint_msg: JointState, hand_img_msg: CompressedImage, head_img_msg: CompressedImage):
     rospy.loginfo("Processing synchronized data...")
     joint_positions = list(_process_joint_states(joint_msg))
-    joint_positions = [joint_positions[1]] + [joint_positions[0]] + [joint_positions[2]] + joint_positions[11:] + [joint_positions[7]] + joint_positions[9:11]
-    
-    if compressed:
-        hand_image = _process_compressed_image(hand_img_msg).tolist()
-        head_image = _process_compressed_image(head_img_msg).tolist()
-    else:
+    if simulation:
         hand_image = _process_raw_image(hand_img_msg).tolist()
         head_image = _process_raw_image(head_img_msg).tolist()
+        joint_positions = [joint_positions[1]] + [joint_positions[0]] + [joint_positions[2]] + joint_positions[14:] + [joint_positions[7]] + joint_positions[9:11]
+    else:
+        hand_image = _process_compressed_image(hand_img_msg).tolist()
+        head_image = _process_compressed_image(head_img_msg).tolist()
+        joint_positions = [joint_positions[1]] + [joint_positions[0]] + [joint_positions[2]] + joint_positions[11:] + [joint_positions[7]] + joint_positions[9:11]
 
     resp = requests.post(SERVER_URL, json={
         "image_head_tensor": head_image,
@@ -106,12 +106,12 @@ if __name__ == '__main__':
             if not ('arm_lift_joint' in joint_sub.name):
                 continue
 
-            if compressed:
-                image_hand_sub = wait_for_message('/hsrb/hand_camera/image_raw/compressed', CompressedImage)
-                image_head_sub = wait_for_message('/hsrb/head_rgbd_sensor/rgb/image_rect_color/compressed', CompressedImage)
-            else:
+            if simulation:
                 image_hand_sub = wait_for_message('/hsrb/hand_camera/image_raw', Image)
                 image_head_sub = wait_for_message('/hsrb/head_rgbd_sensor/rgb/image_rect_color', Image)
+            else:
+                image_hand_sub = wait_for_message('/hsrb/hand_camera/image_raw/compressed', CompressedImage)
+                image_head_sub = wait_for_message('/hsrb/head_rgbd_sensor/rgb/image_rect_color/compressed', CompressedImage)
 
             _process_data(joint_sub, image_hand_sub, image_head_sub) 
         else:
