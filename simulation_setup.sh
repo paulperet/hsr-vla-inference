@@ -1,3 +1,7 @@
+# Install python packages
+apt-get install -y python3-pip libgl1-mesa-glx
+python3 -m pip install opencv-python numpy requests
+
 # Setup catkin workspace
 mkdir /root/catkin_ws
 cd /root/catkin_ws

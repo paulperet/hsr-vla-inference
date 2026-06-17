@@ -75,7 +75,7 @@ Now clone my repository from inside the workspace container:
 docker exec -it tmc_wrs_docker-workspace-1 /bin/bash
 git clone https://github.com/paulperet/hsr-vla-inference
 cd hsr-vla-inference
-sudo simulation_setup.sh
+sudo /bin/bash ./simulation_setup.sh
 ```
 
 
