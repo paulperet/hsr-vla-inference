@@ -22,12 +22,7 @@ if device.type != "cuda":
 
 print(f"Using device: {device}")
 
-# Load configuration
-with open('config.yaml', 'r') as f:
-    config = yaml.load(f, Loader=yaml.FullLoader)
-    repo_id = config['repo_id']
-    print(f"Using model from repository: {repo_id}")
-
+REPO_ID = os.environ.get("REPO_ID", "paulprt/pi05-hsr-80k-aug")
 
 # Start server
 app = FastAPI()
@@ -36,10 +31,10 @@ app = FastAPI()
 @serve.ingress(app)
 class HSRInferenceServer:
     def __init__(self):
-        self.policy = PI05Policy.from_pretrained(repo_id, device_map=device).eval()
+        self.policy = PI05Policy.from_pretrained(REPO_ID, device_map=device).eval()
         self.preprocess, self.postprocess = make_pre_post_processors(
             self.policy.config,
-            repo_id,
+            REPO_ID,
             preprocessor_overrides={"device_processor": {"device": str(device)}},
         )
 

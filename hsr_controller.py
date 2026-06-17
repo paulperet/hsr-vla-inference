@@ -13,6 +13,7 @@ import os
 
 SERVER_URL = os.environ.get("SERVER_URL", "http://host.docker.internal:8000/predict")
 PROMPT = os.environ.get("PROMPT", "Take the cup")
+CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE", 50))
 
 # Total time (excluding inference delay), default 10m
 MAX_TIME = float(os.environ.get("MAX_TIME", 600))
@@ -48,7 +49,7 @@ def _process_data(joint_msg: JointState, hand_img_msg: CompressedImage, head_img
     })
 
     global actions
-    actions = resp.json()["action"][0]
+    actions = resp.json()["action"][0][:CHUNK_SIZE]
     rospy.loginfo(f"Done, received {len(actions)} actions.")
 
 if __name__ == '__main__':
@@ -97,21 +98,21 @@ if __name__ == '__main__':
             arm_cmd.joint_names = ['arm_lift_joint', 'arm_flex_joint', 'arm_roll_joint', 'wrist_flex_joint', 'wrist_roll_joint']
             p = JointTrajectoryPoint()
             p.positions = action[:5]
-            p.time_from_start = rospy.Duration(1 / 5)
+            p.time_from_start = rospy.Duration(1)
             arm_cmd.points = [p]
 
             head_cmd = JointTrajectory()
             head_cmd.joint_names = ['head_tilt_joint', 'head_pan_joint']
             p = JointTrajectoryPoint()
             p.positions = [action[7]] + [action[6]]
-            p.time_from_start = rospy.Duration(1 / 5)
+            p.time_from_start = rospy.Duration(1)
             head_cmd.points = [p]
 
             gripper_cmd = JointTrajectory()
             gripper_cmd.joint_names = ['hand_motor_joint']
             p = JointTrajectoryPoint()
             p.positions = [action[5]]
-            p.time_from_start = rospy.Duration(1 / 5)
+            p.time_from_start = rospy.Duration(1)
             gripper_cmd.points = [p]
 
             base_pub.publish(base_cmd)

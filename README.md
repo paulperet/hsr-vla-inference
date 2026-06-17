@@ -17,6 +17,7 @@ On your computer or another machine with a GPU:
 
 Start server
 ```bash
+export REPO_ID=paulprt/pi05-hsr-80k-aug
 python server.py
 ```
 
@@ -54,5 +55,34 @@ rostopic list
 export SERVER_URL=http://example:8000/predict
 export PROMPT="Grab the cup"
 export MAX_TIME=600
+export CHUNK_SIZE=50
 rosrun hsr_controller hsr_controller.py
 ```
+---
+
+# Running on simulation (Gazebo)
+
+From https://github.com/hsr-project/tmc_wrs_docker:
+```bash
+git clone --recursive https://github.com/hsr-project/tmc_wrs_docker.git
+cd tmc_wrs_docker
+./pull-images.sh
+docker-compose up
+```
+
+Now clone my repository from inside the workspace container:
+```bash
+docker exec -it tmc_wrs_docker-workspace-1 /bin/bash
+git clone https://github.com/paulperet/hsr-vla-inference
+cd hsr-vla-inference
+sudo simulation_setup.sh
+```
+
+
+Simulator UI: http://localhost:3000
+
+# Troubleshooting
+
+workspace-1 doesn't start on macos:
+
+Enable Settings -> General -> "Choose file sharing implementation for your containers" -> gRPC FUSE
