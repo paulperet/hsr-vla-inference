@@ -2,6 +2,9 @@
 apt-get install -y python3-pip libgl1-mesa-glx
 python3 -m pip install opencv-python numpy requests
 
+# Remove old installation
+rm -rf /home/developer/catkin_ws
+
 # Setup catkin workspace
 mkdir /home/developer/catkin_ws
 cd /home/developer/catkin_ws

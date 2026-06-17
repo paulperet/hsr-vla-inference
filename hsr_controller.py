@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
-from sensor_msgs.msg import JointState, CompressedImage
+from sensor_msgs.msg import JointState, CompressedImage, Image
 from geometry_msgs.msg import Twist
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from rospy import wait_for_message
@@ -22,13 +22,23 @@ total_time = MAX_TIME
 # Store actions
 actions = []
 
+# Published topics
+published_topics = rospy.get_published_topics()
+
+# Check if compressed image topics are available
+compressed = True
+if '/hsrb/hand_camera/image_raw/compressed' not in published_topics and '/hsrb/head_rgbd_sensor/rgb/image_rect_color/compressed' not in published_topics:
+    compressed = False
+    rospy.logwarn("Compressed image topics not available. Using raw image topics instead.")
+
 def _process_joint_states(msg: JointState):
     return msg.position
 
-def _process_image(msg: CompressedImage):
+def _process_image(msg):
     try:
         array = np.frombuffer(msg.data, np.uint8)
-        image = cv2.imdecode(array, cv2.IMREAD_COLOR)
+        if compressed:
+            image = cv2.imdecode(array, cv2.IMREAD_COLOR)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
     except cv2.error as error:
@@ -78,8 +88,13 @@ if __name__ == '__main__':
         if len(actions) == 0:
             # Feed a new observation
             joint_sub = wait_for_message('/hsrb/joint_states', JointState)
-            image_hand_sub = wait_for_message('/hsrb/hand_camera/image_raw/compressed', CompressedImage)
-            image_head_sub = wait_for_message('/hsrb/head_rgbd_sensor/rgb/image_rect_color/compressed', CompressedImage)
+
+            if compressed:
+                image_hand_sub = wait_for_message('/hsrb/hand_camera/image_raw/compressed', CompressedImage)
+                image_head_sub = wait_for_message('/hsrb/head_rgbd_sensor/rgb/image_rect_color/compressed', CompressedImage)
+            else:
+                image_hand_sub = wait_for_message('/hsrb/hand_camera/image_raw', Image)
+                image_head_sub = wait_for_message('/hsrb/head_rgbd_sensor/rgb/image_rect_color', Image)
 
             _process_data(joint_sub, image_hand_sub, image_head_sub) 
         else:
