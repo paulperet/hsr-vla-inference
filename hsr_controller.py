@@ -37,6 +37,8 @@ def _process_joint_states(msg: JointState):
 def _process_image(msg):
     try:
         image = np.frombuffer(msg.data, np.uint8)
+        if not compressed:
+            image = image.reshape((msg.height, msg.width, 3))
         image = cv2.imdecode(image, cv2.IMREAD_COLOR)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
