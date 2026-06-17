@@ -76,8 +76,17 @@ docker exec -it tmc_wrs_docker-workspace-1 /bin/bash
 git clone https://github.com/paulperet/hsr-vla-inference
 cd hsr-vla-inference
 sudo /bin/bash ./simulation_setup.sh
+
 ```
 
+Run the node
+```bash
+export SERVER_URL=http://example:8000/predict
+export PROMPT="Grab the cup"
+export MAX_TIME=600
+export CHUNK_SIZE=50
+source /root/catkin_ws/devel/setup.bash && rosrun hsr_controller hsr_controller.py
+```
 
 Simulator UI: http://localhost:3000
 
