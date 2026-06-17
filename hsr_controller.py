@@ -39,7 +39,8 @@ def _process_image(msg):
         image = np.frombuffer(msg.data, np.uint8)
         if not compressed:
             image = image.reshape((msg.height, msg.width, 3))
-        image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+        if compressed:
+            image = cv2.imdecode(image, cv2.IMREAD_COLOR)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
     except cv2.error as error:
