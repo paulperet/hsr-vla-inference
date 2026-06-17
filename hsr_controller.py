@@ -102,6 +102,10 @@ if __name__ == '__main__':
             # Feed a new observation
             joint_sub = wait_for_message('/hsrb/joint_states', JointState)
 
+            # Simulation sends multipel messages in the joint_states topic, check for correct type
+            if not ('arm_lift_joint' in joint_sub.name):
+                continue
+
             if compressed:
                 image_hand_sub = wait_for_message('/hsrb/hand_camera/image_raw/compressed', CompressedImage)
                 image_head_sub = wait_for_message('/hsrb/head_rgbd_sensor/rgb/image_rect_color/compressed', CompressedImage)
