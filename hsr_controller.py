@@ -34,13 +34,19 @@ if '/hsrb/hand_camera/image_raw/compressed' not in published_topics and '/hsrb/h
 def _process_joint_states(msg: JointState):
     return msg.position
 
-def _process_image(msg):
+def _process_compressed_image(msg: CompressedImage):
     try:
         image = np.frombuffer(msg.data, np.uint8)
-        if not compressed:
-            image = image.reshape((msg.height, msg.width, 3))
-        if compressed:
-            image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+        image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        return image
+    except cv2.error as error:
+        rospy.logerr(f"Error converting image: {error}")
+
+def _process_raw_image(msg: Image):
+    try:
+        image = np.frombuffer(msg.data, np.uint8)
+        image = image.reshape((msg.height, msg.width, 3))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
     except cv2.error as error:
@@ -50,8 +56,13 @@ def _process_data(joint_msg: JointState, hand_img_msg: CompressedImage, head_img
     rospy.loginfo("Processing synchronized data...")
     joint_positions = list(_process_joint_states(joint_msg))
     joint_positions = [joint_positions[1]] + [joint_positions[0]] + [joint_positions[2]] + joint_positions[11:] + [joint_positions[7]] + joint_positions[9:11]
-    hand_image = _process_image(hand_img_msg).tolist()
-    head_image = _process_image(head_img_msg).tolist()
+    
+    if compressed:
+        hand_image = _process_compressed_image(hand_img_msg).tolist()
+        head_image = _process_compressed_image(head_img_msg).tolist()
+    else:
+        hand_image = _process_raw_image(hand_img_msg).tolist()
+        head_image = _process_raw_image(head_img_msg).tolist()
 
     resp = requests.post(SERVER_URL, json={
         "image_head_tensor": head_image,
