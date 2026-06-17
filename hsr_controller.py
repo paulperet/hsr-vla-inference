@@ -45,7 +45,7 @@ def _process_compressed_image(msg: CompressedImage):
 
 def _process_raw_image(msg: Image):
     try:
-        image = np.frombuffer(msg.data, np.uint8)
+        image = np.array(msg.data, np.uint8)
         image = image.reshape((msg.height, msg.width, 3))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
