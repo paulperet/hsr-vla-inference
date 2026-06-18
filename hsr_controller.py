@@ -63,8 +63,7 @@ def _process_compressed_image(msg: CompressedImage):
     try:
         image = np.frombuffer(msg.data, np.uint8)
         image = cv2.imdecode(image, cv2.IMREAD_COLOR)
-        if msg.encoding == 'bgr8':
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
     except cv2.error as error:
         rospy.logerr(f"Error converting image: {error}")

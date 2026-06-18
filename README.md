@@ -1,15 +1,13 @@
-### Install
+# Run your VLA on the Human Service Robot
 
-```bash
-git clone https://github.com/paulperet/hsr-vla-inference
-docker image build -t ros_noetic .
-sudo apt install ffmpeg # or brew install ffmpeg
-python3.12 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+## Features
 
----
+- Decoupled server and control node, to load your policy on any machine
+- Switch between tasks without restarting the server
+- Change the horizon of action execution
+- Sim/real implementations
+
+## Install Instructions
 
 ### Server
 
@@ -17,6 +15,12 @@ On your computer or another machine with a GPU:
 
 Start server
 ```bash
+git clone https://github.com/paulperet/hsr-vla-inference
+cd hsr-vla-inference
+sudo apt install ffmpeg # or brew install ffmpeg
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 export REPO_ID=paulprt/pi05-hsr-80k-aug
 python server.py
 ```
@@ -28,11 +32,14 @@ python test_server.py
 
 ---
 
-On a new terminal:
+On a new terminal (And preferably on a ubuntu machine):
 
 ### Start container
 
 ```bash
+git clone https://github.com/paulperet/hsr-vla-inference
+cd hsr-vla-inference
+docker image build -t ros_noetic .
 docker run -it --net=host ros_noetic
 ```
 
@@ -58,11 +65,10 @@ export MAX_TIME=600
 export CHUNK_SIZE=50
 rosrun hsr_controller hsr_controller.py
 ```
----
 
-# Running on simulation (Gazebo)
+## Running on simulation (Gazebo)
 
-From https://github.com/hsr-project/tmc_wrs_docker:
+From https://github.com/hsr-project/tmc_wrs_docker :
 ```bash
 git clone --recursive https://github.com/hsr-project/tmc_wrs_docker.git
 cd tmc_wrs_docker
@@ -92,6 +98,10 @@ Simulator UI: http://localhost:3000
 
 # Troubleshooting
 
-workspace-1 doesn't start on macos:
+On the real robot, command are being sent but robot is not moving:
 
-Enable Settings -> General -> "Choose file sharing implementation for your containers" -> gRPC FUSE
+- Run docker on a ubuntu machine
+
+In simulation, workspace-1 doesn't start on macos:
+
+- Enable Settings -> General -> "Choose file sharing implementation for your containers" -> gRPC FUSE
