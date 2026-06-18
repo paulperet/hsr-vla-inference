@@ -38,16 +38,23 @@ def clamp(value, min_value, max_value):
     return max(min_value, min(value, max_value))
 
 def _clamp_joint_positions(joint_positions):
-    joints_linits = {
-        'arm_lift_joint': (-0.1, 0.9),
-        'arm_flex_joint': (-2.0, 2.0),
-        'arm_roll_joint': (-3.14, 3.14),
-        'wrist_flex_joint': (-2.0, 2.0),
-        'wrist_roll_joint': (-3.14, 3.14),
-        'head_tilt_joint': (-0.5, 1.0),
-        'head_pan_joint': (-3.14, 3.14),
-        'hand_motor_joint': (0.0, 0.04)
+    joints_limits = {
+        'arm_lift_joint': (0.0, 0.69),
+        'arm_flex_joint': (-2.62, 0.0),
+        'arm_roll_joint': (-2.09, 3.84),
+        'wrist_flex_joint': (-1.92, 1.22),
+        'wrist_roll_joint': (-1.92, 3.67),
+        'head_tilt_joint': (-1.57, 0.52),
+        'head_pan_joint': (-3.84, 1.75),
+        'hand_motor_joint': (-0.798, 1.24)
     }
+
+    joints = ['arm_lift_joint', 'arm_flex_joint', 'arm_roll_joint', 'wrist_flex_joint', 'wrist_roll_joint', 'hand_motor_joint', 'head_pan_joint', 'head_tilt_joint']
+
+    for i, joint in enumerate(joints):
+        joint_positions[i] = clamp(joint_positions[i], joints_limits[joint][0], joints_limits[joint][1])
+
+    return joint_positions
 
 def _process_joint_states(msg: JointState):
     return msg.position
@@ -135,6 +142,9 @@ if __name__ == '__main__':
         else:
             # Execute the next action
             action = actions.pop(0)
+
+            # Clamp to valid range
+            action = _clamp_joint_positions(action)
             
             #rospy.loginfo(f"Executing action: {action}")
             rospy.loginfo(f"Remaining time: {total_time}")
