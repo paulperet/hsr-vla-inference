@@ -22,7 +22,7 @@ if device.type != "cuda":
 
 print(f"Using device: {device}")
 
-REPO_ID = os.environ.get("REPO_ID", "paulprt/pi05-hsr-60k-aug")
+REPO_ID = os.environ.get("REPO_ID", "paulprt/pi05-hsr-80k")
 
 # Start server
 app = FastAPI()

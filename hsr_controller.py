@@ -25,6 +25,7 @@ actions = []
 
 # Published topics
 published_topics = rospy.get_published_topics()
+published_topics = [x for sub in published_topics for x in sub]
 
 # Check if compressed image topics are available
 simulation = False
@@ -33,6 +34,21 @@ if '/hsrb/hand_camera/image_raw/compressed' not in published_topics and '/hsrb/h
     bridge = CvBridge()
     rospy.logwarn("Simulation environment detected.")
 
+def clamp(value, min_value, max_value):
+    return max(min_value, min(value, max_value))
+
+def _clamp_joint_positions(joint_positions):
+    joints_linits = {
+        'arm_lift_joint': (-0.1, 0.9),
+        'arm_flex_joint': (-2.0, 2.0),
+        'arm_roll_joint': (-3.14, 3.14),
+        'wrist_flex_joint': (-2.0, 2.0),
+        'wrist_roll_joint': (-3.14, 3.14),
+        'head_tilt_joint': (-0.5, 1.0),
+        'head_pan_joint': (-3.14, 3.14),
+        'hand_motor_joint': (0.0, 0.04)
+    }
+
 def _process_joint_states(msg: JointState):
     return msg.position
 
@@ -40,7 +56,8 @@ def _process_compressed_image(msg: CompressedImage):
     try:
         image = np.frombuffer(msg.data, np.uint8)
         image = cv2.imdecode(image, cv2.IMREAD_COLOR)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        if msg.encoding == 'bgr8':
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
     except cv2.error as error:
         rospy.logerr(f"Error converting image: {error}")
@@ -55,6 +72,7 @@ def _process_raw_image(msg: Image):
 def _process_data(joint_msg: JointState, hand_img_msg: CompressedImage, head_img_msg: CompressedImage):
     rospy.loginfo("Processing synchronized data...")
     joint_positions = list(_process_joint_states(joint_msg))
+
     if simulation:
         hand_image = _process_raw_image(hand_img_msg).tolist()
         head_image = _process_raw_image(head_img_msg).tolist()
@@ -102,7 +120,7 @@ if __name__ == '__main__':
             # Feed a new observation
             joint_sub = wait_for_message('/hsrb/joint_states', JointState)
 
-            # Simulation sends multipel messages in the joint_states topic, check for correct type
+            # Simulation sends multiple messages in the joint_states topic, check for correct type
             if not ('arm_lift_joint' in joint_sub.name):
                 continue
 
