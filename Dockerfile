@@ -12,7 +12,7 @@ RUN echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
 
 # Install necessary packages for ROS and OpenCV
 RUN apt-get install -y python3-pip libgl1-mesa-glx
-RUN python3 -m pip install opencv-python numpy requests
+RUN python3 -m pip install opencv-python numpy requests cv_bridge
 
 ### ROS PACKAGE ###
 
@@ -33,6 +33,9 @@ RUN mkdir /root/catkin_ws/src/hsr_controller/scripts
 
 COPY hsr_debug.py /root/catkin_ws/src/hsr_controller/scripts
 COPY hsr_controller.py /root/catkin_ws/src/hsr_controller/scripts
+COPY data_processing.py /root/catkin_ws/src/hsr_controller/scripts
+COPY hsr_topics.py /root/catkin_ws/src/hsr_controller/scripts
+COPY ros_utils.py /root/catkin_ws/src/hsr_controller/scripts
 
 RUN chmod +x /root/catkin_ws/src/hsr_controller/scripts/hsr_debug.py
 RUN chmod +x /root/catkin_ws/src/hsr_controller/scripts/hsr_controller.py

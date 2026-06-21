@@ -24,6 +24,9 @@ mkdir /home/developer/catkin_ws/src/hsr_controller/scripts
 
 cp /home/developer/hsr-vla-inference/hsr_debug.py /home/developer/catkin_ws/src/hsr_controller/scripts
 cp /home/developer/hsr-vla-inference/hsr_controller.py /home/developer/catkin_ws/src/hsr_controller/scripts
+cp /home/developer/hsr-vla-inference/data_processing.py /home/developer/catkin_ws/src/hsr_controller/scripts
+cp /home/developer/hsr-vla-inference/hsr_topics.py /home/developer/catkin_ws/src/hsr_controller/scripts
+cp /home/developer/hsr-vla-inference/ros_utils.py /home/developer/catkin_ws/src/hsr_controller/scripts
 
 chmod +x /home/developer/catkin_ws/src/hsr_controller/scripts/hsr_debug.py
 chmod +x /home/developer/catkin_ws/src/hsr_controller/scripts/hsr_controller.py
