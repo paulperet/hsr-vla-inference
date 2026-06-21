@@ -70,8 +70,10 @@ def process_data(joint_msg: JointState, hand_img_msg: CompressedImage, head_img_
         "task": prompt
     })
 
+    actions = resp.json()["action"][0][:chunk_size]
+
     rospy.loginfo(f"Done, received {len(actions)} actions.")
-    return resp.json()["action"][0][:chunk_size]
+    return actions
 
 def send_action(action, base_pub, arm_pub, head_pub, gripper_pub):
 
