@@ -1,4 +1,4 @@
-# Run your VLA on the Human Service Robot
+# Run your VLA on the Human Support Robot
 
 ## Features
 

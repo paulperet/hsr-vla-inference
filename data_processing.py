@@ -2,12 +2,12 @@ import rospy
 from sensor_msgs.msg import JointState, CompressedImage, Image
 from geometry_msgs.msg import Twist
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
-from rospy.numpy_msg import numpy_msg
-from rospy import wait_for_message
 import cv2
 from cv_bridge import CvBridge  
 import requests
 import numpy as np 
+
+bridge = CvBridge()
 
 def clamp(value, min_value, max_value):
     return max(min_value, min(value, max_value))

@@ -34,8 +34,6 @@ published_topics = [x for sub in published_topics for x in sub]
 # Check if compressed image topics are available
 simulation, IMAGE_HAND, IMAGE_HEAD, IMG_TYPE = get_sim_and_image_topics()
 
-bridge = CvBridge()
-
 if __name__ == '__main__':
 
     rospy.init_node('hsr_controller')
