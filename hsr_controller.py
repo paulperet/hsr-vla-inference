@@ -34,18 +34,34 @@ published_topics = [x for sub in published_topics for x in sub]
 # Check if compressed image topics are available
 simulation, IMAGE_HAND, IMAGE_HEAD, IMG_TYPE = get_sim_and_image_topics()
 
+def save_img_hand(img):
+    global image_hand_sub
+    image_hand_sub = img
+
+def save_img_head(img):
+    global image_head_sub
+    image_head_sub = img
+
 if __name__ == '__main__':
 
     rospy.init_node('hsr_controller')
     rospy.loginfo("HSR Controller node started.")
 
-    print(f"Prompt: {PROMPT}, Max time: {MAX_TIME}s")
+    rospy.loginfo(f"Prompt: {PROMPT}, Max time: {MAX_TIME}s")
 
     # Initialize HSR policy rate
     rate = rospy.Rate(30) # 30 Hz
 
+
+    image_hand_sub = wait_for_message(IMAGE_HAND, IMG_TYPE)
+    image_head_sub = wait_for_message(IMAGE_HEAD, IMG_TYPE)
+
     if SYNC_MODE == "sync":
         while not rospy.is_shutdown() and total_time > 0:
+
+            rospy.Subscriber(IMAGE_HAND, IMG_TYPE, save_img_hand)
+            rospy.Subscriber(IMAGE_HEAD, IMG_TYPE, save_img_head)
+
             if len(actions) == 0:
                 # Feed a new observation
                 joint_sub = wait_for_message('/hsrb/joint_states', JointState)
@@ -53,10 +69,6 @@ if __name__ == '__main__':
                 # Simulation sends multiple messages in the joint_states topic, check for correct type
                 if not ('arm_lift_joint' in joint_sub.name):
                     continue
-
-                # Get images observation
-                image_hand_sub = wait_for_message(IMAGE_HAND, IMG_TYPE)
-                image_head_sub = wait_for_message(IMAGE_HEAD, IMG_TYPE)
 
                 actions = process_data(joint_sub, image_hand_sub, image_head_sub, SERVER_URL, PROMPT, CHUNK_SIZE, simulation) 
             else:
