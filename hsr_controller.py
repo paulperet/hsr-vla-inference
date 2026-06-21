@@ -58,7 +58,7 @@ if __name__ == '__main__':
                 image_hand_sub = wait_for_message(IMAGE_HAND, IMG_TYPE)
                 image_head_sub = wait_for_message(IMAGE_HEAD, IMG_TYPE)
 
-                process_data(joint_sub, image_hand_sub, image_head_sub, SERVER_URL, PROMPT, CHUNK_SIZE, simulation) 
+                actions = process_data(joint_sub, image_hand_sub, image_head_sub, SERVER_URL, PROMPT, CHUNK_SIZE, simulation) 
             else:
                 # Execute the next action
                 action = actions.pop(0)
