@@ -7,6 +7,8 @@ from cv_bridge import CvBridge
 import requests
 import numpy as np 
 
+bridge = CvBridge()
+
 def clamp(value, min_value, max_value):
     return max(min_value, min(value, max_value))
 
@@ -43,7 +45,6 @@ def process_compressed_image(msg: CompressedImage):
 
 def process_raw_image(msg: Image):
     try:
-        bridge = CvBridge()
         image = bridge.imgmsg_to_cv2(msg, desired_encoding='rgb8')
         return image
     except cv2.error as error:
