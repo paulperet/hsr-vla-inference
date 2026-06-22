@@ -63,8 +63,8 @@ if __name__ == '__main__':
     if SYNC_MODE == "sync":
         while not rospy.is_shutdown() and total_time > 0:
 
-            rospy.Subscriber(IMAGE_HAND, IMG_TYPE, save_img_hand, queue_size=1)
-            rospy.Subscriber(IMAGE_HEAD, IMG_TYPE, save_img_head, queue_size=1)
+            rospy.Subscriber(IMAGE_HAND, IMG_TYPE, save_img_hand, queue_size=1, buff_size=2**24)
+            rospy.Subscriber(IMAGE_HEAD, IMG_TYPE, save_img_head, queue_size=1, buff_size=2**24)
             rospy.Subscriber('/hsrb/joint_states', JointState, save_joint_states, queue_size=1)
 
             if len(actions) == 0:

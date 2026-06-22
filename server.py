@@ -14,6 +14,17 @@ from ray import serve
 
 device = select_device()
 
+
+def debug(raw_data):
+    from PIL import Image
+    import numpy as np
+    
+    im = Image.fromarray(np.array(raw_data.image_head_tensor, dtype=np.uint8))
+    im.save("head.jpeg")
+
+    im = Image.fromarray(np.array(raw_data.image_hand_tensor, dtype=np.uint8))
+    im.save("hand.jpeg")
+
 # Disable TorchDynamo and TorchCompile if not using CUDA
 # Avoid crash on mps/cpu
 if device.type != "cuda":
@@ -31,7 +42,7 @@ app = FastAPI()
 @serve.ingress(app)
 class HSRInferenceServer:
     def __init__(self):
-        self.policy = PI05Policy.from_pretrained(REPO_ID, device_map=device).eval()
+        self.policy = torch.compile(PI05Policy.from_pretrained(REPO_ID, device_map=device)).eval()
         self.preprocess, self.postprocess = make_pre_post_processors(
             self.policy.config,
             REPO_ID,
@@ -42,6 +53,8 @@ class HSRInferenceServer:
     def predict(self, raw_data:  Input = Body(...)) -> Output:
         # Process the single request.
 
+        #debug(raw_data)
+
         data = {
             "observation.image.head": torch.tensor(raw_data.image_head_tensor).permute(2, 0, 1).float() / 255.0,
             "observation.image.hand": torch.tensor(raw_data.image_hand_tensor).permute(2, 0, 1).float() / 255.0,
@@ -49,10 +62,11 @@ class HSRInferenceServer:
             "task": raw_data.task
             }
 
-        print(data["observation.image.hand"].shape)
-        print(data["observation.image.head"].shape)
-        print(data["observation.state"].shape)
-        print(data["task"])
+        # Useful data debug
+        # print(data["observation.image.hand"].shape)
+        # print(data["observation.image.head"].shape)
+        # print(data["observation.state"].shape)
+        # print(data["task"])
         
         data = self.preprocess(data)
 
