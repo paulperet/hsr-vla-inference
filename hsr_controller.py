@@ -8,10 +8,10 @@ import cv2
 from cv_bridge import CvBridge
 import numpy as np
 
-import requests
 import os
+import threading
 
-from data_processing import process_data, send_action
+from data_processing import predict_action_chunk, send_action
 from ros_utils import get_sim_and_image_topics
 from hsr_topics import base_pub, arm_pub, head_pub, gripper_pub
 
@@ -46,21 +46,73 @@ def save_joint_states(msg):
     global joint_sub
     joint_sub = msg
 
-if __name__ == '__main__':
+action_index = 0
 
+actions_lock = threading.Lock()
+
+def produce_actions():
+
+    while True:
+
+        global action_index
+        index_at_creation = action_index
+
+        # Simulation sends multiple messages in the joint_states topic, check for correct type
+        if not ('arm_lift_joint' in joint_sub.name):
+            continue
+        
+        try:
+            new_chunk = predict_action_chunk(joint_sub, image_hand_sub, image_head_sub, SERVER_URL, PROMPT, CHUNK_SIZE, simulation)
+
+            with actions_lock:
+                global actions
+                actions = new_chunk[action_index-index_at_creation:]
+        except:
+            continue
+
+def consume_actions():
+    global total_time
+    while not rospy.is_shutdown() and total_time > 0:
+        with actions_lock:
+            global actions
+            if not actions:
+                continue
+
+        rospy.Subscriber(IMAGE_HAND, IMG_TYPE, save_img_hand, queue_size=1, buff_size=2**24)
+        rospy.Subscriber(IMAGE_HEAD, IMG_TYPE, save_img_head, queue_size=1, buff_size=2**24)
+        rospy.Subscriber('/hsrb/joint_states', JointState, save_joint_states, queue_size=1)
+        
+        action = actions.pop(0)
+
+        global action_index
+        action_index += 1
+
+        # Execute current action
+        send_action(action, base_pub, arm_pub, head_pub, gripper_pub)
+        
+        #rospy.loginfo(f"Executing action: {action}")
+        rospy.loginfo(f"Remaining time: {total_time}")
+
+        # Subtract the time for one action at 30hz
+        total_time -= 1/30
+
+        rate.sleep()
+
+if __name__ == '__main__':
     rospy.init_node('hsr_controller')
     rospy.loginfo("HSR Controller node started.")
-
-    rospy.loginfo(f"Prompt: {PROMPT}, Max time: {MAX_TIME}s")
-
-    # Initialize HSR policy rate
-    rate = rospy.Rate(30) # 30 Hz
 
     image_hand_sub = wait_for_message(IMAGE_HAND, IMG_TYPE)
     image_head_sub = wait_for_message(IMAGE_HEAD, IMG_TYPE)
     joint_sub = wait_for_message('/hsrb/joint_states', JointState)
 
+    rospy.loginfo(f"Mode: {SYNC_MODE}, Prompt: {PROMPT}, Max time: {MAX_TIME}s")
+
+    # Initialize HSR policy rate
+    rate = rospy.Rate(30) # 30 Hz
+
     if SYNC_MODE == "sync":
+
         while not rospy.is_shutdown() and total_time > 0:
 
             rospy.Subscriber(IMAGE_HAND, IMG_TYPE, save_img_hand, queue_size=1, buff_size=2**24)
@@ -75,7 +127,7 @@ if __name__ == '__main__':
                 if not ('arm_lift_joint' in joint_sub.name):
                     continue
 
-                actions = process_data(joint_sub, image_hand_sub, image_head_sub, SERVER_URL, PROMPT, CHUNK_SIZE, simulation) 
+                actions = predict_action_chunk(joint_sub, image_hand_sub, image_head_sub, SERVER_URL, PROMPT, CHUNK_SIZE, simulation) 
             else:
                 # Execute the next action
                 action = actions.pop(0)
@@ -90,3 +142,14 @@ if __name__ == '__main__':
                 total_time -= 1/30
 
                 rate.sleep()
+    
+    elif SYNC_MODE == "async":
+        # Create two instances of the Process class, one for each function
+        producer = threading.Thread(target=produce_actions)
+
+        # Start both processes
+        producer.start()
+        consume_actions()
+
+        # Wait for both processes to finish
+        producer.join()

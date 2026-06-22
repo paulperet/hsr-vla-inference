@@ -50,8 +50,8 @@ def process_raw_image(msg: Image):
     except cv2.error as error:
         rospy.logerr(f"Error converting image: {error}")
 
-def process_data(joint_msg: JointState, hand_img_msg: CompressedImage, head_img_msg: CompressedImage, server_url: str, prompt: str, chunk_size: int, simulation: bool):
-    rospy.loginfo("Processing synchronized data...")
+def predict_action_chunk(joint_msg: JointState, hand_img_msg: CompressedImage, head_img_msg: CompressedImage, server_url: str, prompt: str, chunk_size: int, simulation: bool):
+    rospy.loginfo("Processing data...")
     joint_positions = list(process_joint_states(joint_msg))
 
     if simulation:
