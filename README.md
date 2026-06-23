@@ -91,6 +91,7 @@ export SERVER_URL=http://example:8000/predict
 export PROMPT="Grab the cup"
 export MAX_TIME=600
 export CHUNK_SIZE=50
+export SYNC_MODE="async" 
 rosrun hsr_controller hsr_controller.py
 ```
 

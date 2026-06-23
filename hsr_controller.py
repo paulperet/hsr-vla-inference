@@ -49,6 +49,10 @@ def save_img_head(img):
 
 def save_joint_states(msg):
     global joint_sub
+    if simulation:
+        # Simulation sends multiple messages in the joint_states topic, check for correct type
+        if not ('arm_lift_joint' in msg.name):
+            return
     joint_sub = msg
 
 action_index = 0
@@ -59,18 +63,17 @@ def produce_actions():
 
     while True:
 
-        global action_index
+        global action_index, actions
         index_at_creation = action_index
 
         # Simulation sends multiple messages in the joint_states topic, check for correct type
         if not ('arm_lift_joint' in joint_sub.name):
             continue
         
-        if action_index == 0 or len(actions) > ASYNC_START_THRESHOLD:
+        if action_index == 0 or len(actions) < ASYNC_START_THRESHOLD:
             new_chunk = predict_action_chunk(joint_sub, image_hand_sub, image_head_sub, SERVER_URL, PROMPT, CHUNK_SIZE, simulation)
 
             with actions_lock:
-                global actions
                 actions = new_chunk[action_index-index_at_creation:]
 
             rospy.loginfo(f"Adding {len(actions)} fresh actions")
@@ -113,6 +116,10 @@ if __name__ == '__main__':
     image_head_sub = wait_for_message(IMAGE_HEAD, IMG_TYPE)
     joint_sub = wait_for_message('/hsrb/joint_states', JointState)
 
+    # Simulation sends multiple messages in the joint_states topic, check for correct type
+    while not ('arm_lift_joint' in joint_sub.name):
+        joint_sub = wait_for_message('/hsrb/joint_states', JointState)
+
     rospy.Subscriber(IMAGE_HAND, IMG_TYPE, save_img_hand, queue_size=1, buff_size=2**24)
     rospy.Subscriber(IMAGE_HEAD, IMG_TYPE, save_img_head, queue_size=1, buff_size=2**24)
     rospy.Subscriber('/hsrb/joint_states', JointState, save_joint_states, queue_size=1)
@@ -127,11 +134,6 @@ if __name__ == '__main__':
         while not rospy.is_shutdown() and total_time > 0:
             
             if len(actions) == 0:
-
-                # Simulation sends multiple messages in the joint_states topic, check for correct type
-                if not ('arm_lift_joint' in joint_sub.name):
-                    continue
-
                 actions = predict_action_chunk(joint_sub, image_hand_sub, image_head_sub, SERVER_URL, PROMPT, CHUNK_SIZE, simulation) 
             else:
                 consume_single_action()

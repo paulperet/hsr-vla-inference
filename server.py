@@ -42,7 +42,7 @@ app = FastAPI()
 @serve.ingress(app)
 class HSRInferenceServer:
     def __init__(self):
-        self.policy = torch.compile(PI05Policy.from_pretrained(REPO_ID, device_map=device)).eval()
+        self.policy = torch.compile(PI05Policy.from_pretrained(REPO_ID).to(device)).eval()
         self.preprocess, self.postprocess = make_pre_post_processors(
             self.policy.config,
             REPO_ID,
