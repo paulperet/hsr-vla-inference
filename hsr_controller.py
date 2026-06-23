@@ -21,6 +21,11 @@ CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE", 50))
 SYNC_MODE = str(os.environ.get("SYNC_MODE", "sync"))
 MAX_TIME = float(os.environ.get("MAX_TIME", 600))
 
+# Convert inference time to actions : ASYNC_START_THRESHOLD = t_inference * rate (for 30hz: ASYNC_START_THRESHOLD = t_inference * 30)
+# Add a constant delay to compensate for inconsistent communication time : ASYNC_START_THRESHOLD += delay
+# Use only if time to produce a new chunk is below or equal to time to consume a new chunk: t_inference < 25 / rate
+ASYNC_START_THRESHOLD = float(os.environ.get("ASYNC_START_THRESHOLD", 10))
+
 # Total time (excluding inference delay), default 10m
 total_time = MAX_TIME
 
@@ -61,14 +66,15 @@ def produce_actions():
         if not ('arm_lift_joint' in joint_sub.name):
             continue
         
-        try:
+        if action_index == 0 or len(actions) > ASYNC_START_THRESHOLD:
             new_chunk = predict_action_chunk(joint_sub, image_hand_sub, image_head_sub, SERVER_URL, PROMPT, CHUNK_SIZE, simulation)
 
             with actions_lock:
                 global actions
                 actions = new_chunk[action_index-index_at_creation:]
-        except:
-            continue
+
+            rospy.loginfo(f"Adding {len(actions)} fresh actions")
+
 
 def consume_actions():
     global total_time
@@ -76,27 +82,28 @@ def consume_actions():
         with actions_lock:
             global actions
             if not actions:
+                rospy.loginfo("WARNING: Exhausted actions, server may be too slow")
                 continue
 
-        rospy.Subscriber(IMAGE_HAND, IMG_TYPE, save_img_hand, queue_size=1, buff_size=2**24)
-        rospy.Subscriber(IMAGE_HEAD, IMG_TYPE, save_img_head, queue_size=1, buff_size=2**24)
-        rospy.Subscriber('/hsrb/joint_states', JointState, save_joint_states, queue_size=1)
-        
-        action = actions.pop(0)
+        consume_single_action()
 
-        global action_index
-        action_index += 1
+def consume_single_action():
+    global actions
+    action = actions.pop(0)
 
-        # Execute current action
-        send_action(action, base_pub, arm_pub, head_pub, gripper_pub)
-        
-        #rospy.loginfo(f"Executing action: {action}")
-        rospy.loginfo(f"Remaining time: {total_time}")
+    global action_index, total_time
+    action_index += 1
 
-        # Subtract the time for one action at 30hz
-        total_time -= 1/30
+    # Execute current action
+    send_action(action, base_pub, arm_pub, head_pub, gripper_pub)
+    
+    #rospy.loginfo(f"Executing action: {action}")
+    rospy.loginfo(f"Remaining time: {total_time}")
 
-        rate.sleep()
+    # Subtract the time for one action at 30hz
+    total_time -= 1/30
+
+    rate.sleep()
 
 if __name__ == '__main__':
     rospy.init_node('hsr_controller')
@@ -106,6 +113,10 @@ if __name__ == '__main__':
     image_head_sub = wait_for_message(IMAGE_HEAD, IMG_TYPE)
     joint_sub = wait_for_message('/hsrb/joint_states', JointState)
 
+    rospy.Subscriber(IMAGE_HAND, IMG_TYPE, save_img_hand, queue_size=1, buff_size=2**24)
+    rospy.Subscriber(IMAGE_HEAD, IMG_TYPE, save_img_head, queue_size=1, buff_size=2**24)
+    rospy.Subscriber('/hsrb/joint_states', JointState, save_joint_states, queue_size=1)
+
     rospy.loginfo(f"Mode: {SYNC_MODE}, Prompt: {PROMPT}, Max time: {MAX_TIME}s")
 
     # Initialize HSR policy rate
@@ -114,14 +125,8 @@ if __name__ == '__main__':
     if SYNC_MODE == "sync":
 
         while not rospy.is_shutdown() and total_time > 0:
-
-            rospy.Subscriber(IMAGE_HAND, IMG_TYPE, save_img_hand, queue_size=1, buff_size=2**24)
-            rospy.Subscriber(IMAGE_HEAD, IMG_TYPE, save_img_head, queue_size=1, buff_size=2**24)
-            rospy.Subscriber('/hsrb/joint_states', JointState, save_joint_states, queue_size=1)
-
+            
             if len(actions) == 0:
-                # Feed a new observation
-                joint_sub = wait_for_message('/hsrb/joint_states', JointState)
 
                 # Simulation sends multiple messages in the joint_states topic, check for correct type
                 if not ('arm_lift_joint' in joint_sub.name):
@@ -129,19 +134,7 @@ if __name__ == '__main__':
 
                 actions = predict_action_chunk(joint_sub, image_hand_sub, image_head_sub, SERVER_URL, PROMPT, CHUNK_SIZE, simulation) 
             else:
-                # Execute the next action
-                action = actions.pop(0)
-
-                # Execute current action
-                send_action(action, base_pub, arm_pub, head_pub, gripper_pub)
-                
-                #rospy.loginfo(f"Executing action: {action}")
-                rospy.loginfo(f"Remaining time: {total_time}")
-
-                # Subtract the time for one action at 30hz
-                total_time -= 1/30
-
-                rate.sleep()
+                consume_single_action()
     
     elif SYNC_MODE == "async":
         # Create two instances of the Process class, one for each function
