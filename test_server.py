@@ -9,7 +9,8 @@ resp = requests.post("http://localhost:8000/predict", json={
     "image_head_tensor": torch.randn(480, 640, 3).tolist(),
     "image_hand_tensor": torch.randn(480, 640, 3).tolist(),
     "observation": torch.randn(8).tolist(),
-    "task": "example_task"
+    "task": "example_task",
+    "previous_actions" : []
 })
 
 resp = torch.tensor(resp.json()["action"])

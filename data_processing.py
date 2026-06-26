@@ -50,7 +50,7 @@ def process_raw_image(msg: Image):
     except cv2.error as error:
         rospy.logerr(f"Error converting image: {error}")
 
-def predict_action_chunk(joint_msg: JointState, hand_img_msg: CompressedImage, head_img_msg: CompressedImage, server_url: str, prompt: str, chunk_size: int, simulation: bool):
+def predict_action_chunk(joint_msg: JointState, hand_img_msg: CompressedImage, head_img_msg: CompressedImage, server_url: str, prompt: str, chunk_size: int, simulation: bool, previous_actions: list[list[int]]):
     rospy.loginfo("Processing data...")
     joint_positions = list(process_joint_states(joint_msg))
 
@@ -67,7 +67,8 @@ def predict_action_chunk(joint_msg: JointState, hand_img_msg: CompressedImage, h
         "image_head_tensor": head_image,
         "image_hand_tensor": hand_image,
         "observation": joint_positions,
-        "task": prompt
+        "task": prompt,
+        "previous_actions": previous_actions
     })
 
     actions = resp.json()["action"][0][:chunk_size]

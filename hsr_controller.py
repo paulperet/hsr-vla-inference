@@ -71,7 +71,10 @@ def produce_actions():
             continue
         
         if action_index == 0 or len(actions) < ASYNC_START_THRESHOLD:
-            new_chunk = predict_action_chunk(joint_sub, image_hand_sub, image_head_sub, SERVER_URL, PROMPT, CHUNK_SIZE, simulation)
+            if SYNC_MODE == "async":
+                new_chunk = predict_action_chunk(joint_sub, image_hand_sub, image_head_sub, SERVER_URL, PROMPT, CHUNK_SIZE, simulation, [])
+            elif SYNC_MODE == "rtc":
+                new_chunk = predict_action_chunk(joint_sub, image_hand_sub, image_head_sub, SERVER_URL, PROMPT, CHUNK_SIZE, simulation, actions)
 
             with actions_lock:
                 actions = new_chunk[action_index-index_at_creation:]
@@ -134,11 +137,11 @@ if __name__ == '__main__':
         while not rospy.is_shutdown() and total_time > 0:
             
             if len(actions) == 0:
-                actions = predict_action_chunk(joint_sub, image_hand_sub, image_head_sub, SERVER_URL, PROMPT, CHUNK_SIZE, simulation) 
+                actions = predict_action_chunk(joint_sub, image_hand_sub, image_head_sub, SERVER_URL, PROMPT, CHUNK_SIZE, simulation, []) 
             else:
                 consume_single_action()
     
-    elif SYNC_MODE == "async":
+    elif SYNC_MODE == "async" or SYNC_MODE == "rtc":
         # Create two instances of the Process class, one for each function
         producer = threading.Thread(target=produce_actions)
 

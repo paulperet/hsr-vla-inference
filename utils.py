@@ -8,6 +8,7 @@ class Input(BaseModel):
     image_hand_tensor: list[list[list[float]]]
     observation: list[float]
     task: str
+    previous_actions: list[list[float]]
 class Output(BaseModel):
     action: list[list[list[float]]]
 
