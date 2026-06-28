@@ -24,7 +24,7 @@ MAX_TIME = float(os.environ.get("MAX_TIME", 600))
 # Convert inference time to actions : ASYNC_START_THRESHOLD = t_inference * rate (for 30hz: ASYNC_START_THRESHOLD = t_inference * 30)
 # Add a constant delay to compensate for inconsistent communication time : ASYNC_START_THRESHOLD += delay
 # Use only if time to produce a new chunk is below or equal to time to consume a new chunk: t_inference < 25 / rate
-ASYNC_START_THRESHOLD = float(os.environ.get("ASYNC_START_THRESHOLD", 10))
+INFERENCE_TIME = float(os.environ.get("INFERENCE_TIME", 10))
 
 # Total time (excluding inference delay), default 10m
 total_time = MAX_TIME
@@ -70,7 +70,7 @@ def produce_actions():
         if not ('arm_lift_joint' in joint_sub.name):
             continue
         
-        if action_index == 0 or len(actions) < ASYNC_START_THRESHOLD:
+        if action_index == 0 or len(actions) <= INFERENCE_TIME:
             if SYNC_MODE == "async":
                 new_chunk = predict_action_chunk(joint_sub, image_hand_sub, image_head_sub, SERVER_URL, PROMPT, CHUNK_SIZE, simulation, [])
             elif SYNC_MODE == "rtc":
